@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-project(rt64)
+project(rt64 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+
+if (APPLE)
+    enable_language(OBJC OBJCXX)
+endif()
 
 option(RT64_BUILD_EXAMPLES "Build examples for RT64" OFF)
 if (${RT64_BUILD_EXAMPLES})
@@ -370,6 +374,15 @@ target_link_libraries(rt64 libzstd_static)
 # Add tools.
 add_subdirectory(src/tools/texture_hasher)
 add_subdirectory(src/tools/texture_packer)
+
+# Add any Apple-specific source files and libraries
+if (APPLE)
+    target_sources(rt64 PRIVATE
+        "${PROJECT_SOURCE_DIR}/src/vulkan/rt64_vulkan_apple.mm"
+    )
+
+    target_link_libraries(rt64 "-framework Metal -framework Foundation -framework QuartzCore -framework CoreGraphics")
+endif()
 
 # Add any Windows-specific source files and libraries
 if (WIN32)
