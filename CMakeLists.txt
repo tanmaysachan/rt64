@@ -381,7 +381,7 @@ if (APPLE)
         "${PROJECT_SOURCE_DIR}/src/vulkan/rt64_vulkan_apple.mm"
     )
 
-    target_link_libraries(rt64 "-framework Metal -framework Foundation -framework QuartzCore -framework CoreGraphics")
+    target_link_libraries(rt64 "-framework Metal -framework Foundation -framework QuartzCore -framework CoreGraphics -framework IOKit -framework AppKit -framework IOSurface")
 endif()
 
 # Add any Windows-specific source files and libraries
