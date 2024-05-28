@@ -378,7 +378,7 @@ add_subdirectory(src/tools/texture_packer)
 # Add any Apple-specific source files and libraries
 if (APPLE)
     target_sources(rt64 PRIVATE
-        "${PROJECT_SOURCE_DIR}/src/vulkan/rt64_vulkan_apple.mm"
+        "${PROJECT_SOURCE_DIR}/src/common/rt64_apple.mm"
     )
 
     target_link_libraries(rt64 "-framework Metal -framework Foundation -framework QuartzCore -framework CoreGraphics -framework IOKit -framework AppKit -framework IOSurface")
