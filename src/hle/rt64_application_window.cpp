@@ -13,6 +13,8 @@
 #elif defined(__linux__)
 #   define Status int
 #   include <X11/extensions/Xrandr.h>
+#elif defined(__APPLE__)
+#   include "vulkan/rt64_vulkan_apple.h"
 #endif
 
 #include "common/rt64_common.h"
@@ -271,8 +273,11 @@ namespace RT64 {
             }
         }
 
-        XRRFreeScreenResources(screenResources);
+#   elif defined(__APPLE__)
+        refreshRate = GetWindowRefreshRate(windowHandle.window);
 #   endif
+
+        XRRFreeScreenResources(screenResources);
     }
 
     uint32_t ApplicationWindow::getRefreshRate() const {
