@@ -11,8 +11,10 @@ struct CocoaWindowAttributes {
     int width, height;
 };
 
-void GetWindowAttributes(void* window, CocoaWindowAttributes *attributes);
 const char* GetHomeDirectory();
+
+void GetWindowAttributes(void* window, CocoaWindowAttributes *attributes);
 int GetWindowRefreshRate(void* window);
+void WindowToggleFullscreen(void* window);
 
 void DispatchOnMainThread(std::function<void()> func);
