@@ -202,6 +202,11 @@ namespace RT64 {
         }
 
         fullScreen = newFullScreen;
+#   elif defined(__APPLE__)
+        DispatchOnMainThread([this] {
+            WindowToggleFullscreen(windowHandle.window);
+        });
+        fullScreen = newFullScreen;
 #   endif
     }
     
@@ -288,6 +293,11 @@ namespace RT64 {
 #   elif defined(__linux__)
         XWindowAttributes attributes;
         XGetWindowAttributes(windowHandle.display, windowHandle.window, &attributes);
+        newWindowLeft = attributes.x;
+        newWindowTop = attributes.y;
+#   elif defined(__APPLE__)
+        CocoaWindowAttributes attributes;
+        GetWindowAttributes(windowHandle.window, &attributes);
         newWindowLeft = attributes.x;
         newWindowTop = attributes.y;
 #   endif
