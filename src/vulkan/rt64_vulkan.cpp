@@ -3976,19 +3976,6 @@ namespace RT64 {
             return;
         }
 
-    #ifdef __APPLE__
-        const VkBool32 setting_display_watermark = VK_TRUE;
-        const VkLayerSettingEXT settings[] = {
-            {kMVKMoltenVKDriverLayerName, "MVK_CONFIG_DISPLAY_WATERMARK", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_display_watermark},
-            {kMVKMoltenVKDriverLayerName, "MVK_CONFIG_SHADER_CONVERSION_FLIP_VERTEX_Y", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_display_watermark},
-        };
-
-        const VkLayerSettingsCreateInfoEXT layer_settings_create_info = {
-            VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT, nullptr,
-            static_cast<uint32_t>(std::size(settings)), settings
-        };
-    #endif
-
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "RT64";
         appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -4003,7 +3990,6 @@ namespace RT64 {
         createInfo.enabledLayerCount = 0;
 
         #ifdef __APPLE__
-        createInfo.pNext = &layer_settings_create_info;
         createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
         #endif
 
