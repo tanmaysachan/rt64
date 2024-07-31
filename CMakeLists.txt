@@ -414,11 +414,21 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 endif()
 
 preprocess_shader(rt64 "src/shaders/RenderParams.hlsli")
-
 if (${WIN32})
     build_library_shader(rt64 "src/shaders/RasterPS.hlsl" "src/shaders/RasterPSLibrary.hlsl")
     build_library_shader(rt64 "src/shaders/RasterPS.hlsl" "src/shaders/RasterPSLibraryMS.hlsl" "-D MULTISAMPLING")
     build_library_shader(rt64 "src/shaders/RasterVS.hlsl" "src/shaders/RasterVSLibrary.hlsl")
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    find_package(Vulkan QUIET)
+    if(DEFINED ENV{VULKAN_SDK})
+        target_include_directories(rt64 PRIVATE "$ENV{VULKAN_SDK}/include")
+    elseif(TARGET Vulkan::Vulkan)
+        # Note: We don't use target_link_libraries for Vulkan::Vulkan to avoid a static dependency on libvulkan1
+        target_include_directories(rt64 PRIVATE ${Vulkan_INCLUDE_DIRS})
+    endif()
+
 endif()
 
 build_pixel_shader(  rt64 "src/shaders/RasterPS.hlsl" "src/shaders/RasterPSDynamic.hlsl" "-D DYNAMIC_RENDER_PARAMS")
