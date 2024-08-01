@@ -278,11 +278,11 @@ namespace RT64 {
             }
         }
 
+        XRRFreeScreenResources(screenResources);
+
 #   elif defined(__APPLE__)
         refreshRate = GetWindowRefreshRate(windowHandle.window);
 #   endif
-
-        XRRFreeScreenResources(screenResources);
     }
 
     uint32_t ApplicationWindow::getRefreshRate() const {

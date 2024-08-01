@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstring>
 #include <chrono>
+#include <memory>
 #include <thread>
 
 #ifdef __APPLE__
@@ -600,7 +601,10 @@ namespace RT64 {
         Test.commandList->traceRays(width, height, 1, Test.rtShaderBindingTableBuffer.get(), Test.rtShaderBindingTableInfo.groups);
 #   endif
 #   if ENABLE_SWAP_CHAIN
-        const uint32_t swapChainTextureIndex = Test.swapChain->getTextureIndex();
+        std::unique_ptr<RenderCommandSemaphore> drawSemaphore = Test.device->createCommandSemaphore();
+        RenderCommandSemaphore *signalSemaphore = drawSemaphore.get();
+        uint32_t swapChainTextureIndex = 0;
+        Test.swapChain->acquireTexture(signalSemaphore, &swapChainTextureIndex);
         RenderTexture *swapChainTexture = Test.swapChain->getTexture(swapChainTextureIndex);
         RenderFramebuffer *swapFramebuffer = Test.swapFramebuffers[swapChainTextureIndex].get();
         Test.commandList->setViewports(viewport);
@@ -624,7 +628,7 @@ namespace RT64 {
         Test.commandList->end();
         Test.commandQueue->executeCommandLists(Test.commandList.get(), Test.commandFence.get());
 #   if ENABLE_SWAP_CHAIN
-        Test.swapChain->present();
+        Test.swapChain->present(swapChainTextureIndex, &signalSemaphore, 1);
 #   endif
         Test.commandQueue->waitForCommandFence(Test.commandFence.get());
     }
