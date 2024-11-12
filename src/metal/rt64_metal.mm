@@ -1046,6 +1046,10 @@ namespace RT64 {
         // TODO: Unimplemented.
     }
 
+    void MetalDescriptorSet::setSampler(uint32_t descriptorIndex, const RenderSampler *sampler) {
+        // TODO: Unimplemented.
+    }
+
     void MetalDescriptorSet::setAccelerationStructure(uint32_t descriptorIndex, const RenderAccelerationStructure *accelerationStructure) {
         // TODO: Unimplemented.
     }
@@ -1100,6 +1104,15 @@ namespace RT64 {
         uint32_t windowWidth, windowHeight;
         getWindowSize(windowWidth, windowHeight);
         return (layer == nullptr) || (width != windowWidth) || (height != windowHeight);
+    }
+
+    void MetalSwapChain::setVsyncEnabled(bool vsyncEnabled) {
+        // TODO: Unimplemented.
+    }
+
+    bool MetalSwapChain::isVsyncEnabled() const {
+        // TODO: Unimplemented.
+        return false;
     }
 
     void MetalSwapChain::setVsyncEnabled(bool vsyncEnabled) {
