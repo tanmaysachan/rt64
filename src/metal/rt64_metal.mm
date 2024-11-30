@@ -944,6 +944,8 @@ namespace RT64 {
 
     MetalGraphicsPipeline::~MetalGraphicsPipeline() {
         // TODO: Should be handled by ARC
+        delete[] renderState->samplePositions;
+        delete renderState;
     }
 
     RenderPipelineProgram MetalGraphicsPipeline::getProgram(const std::string &name) const {
@@ -1046,10 +1048,6 @@ namespace RT64 {
         // TODO: Unimplemented.
     }
 
-    void MetalDescriptorSet::setSampler(uint32_t descriptorIndex, const RenderSampler *sampler) {
-        // TODO: Unimplemented.
-    }
-
     void MetalDescriptorSet::setAccelerationStructure(uint32_t descriptorIndex, const RenderAccelerationStructure *accelerationStructure) {
         // TODO: Unimplemented.
     }
@@ -1104,15 +1102,6 @@ namespace RT64 {
         uint32_t windowWidth, windowHeight;
         getWindowSize(windowWidth, windowHeight);
         return (layer == nullptr) || (width != windowWidth) || (height != windowHeight);
-    }
-
-    void MetalSwapChain::setVsyncEnabled(bool vsyncEnabled) {
-        // TODO: Unimplemented.
-    }
-
-    bool MetalSwapChain::isVsyncEnabled() const {
-        // TODO: Unimplemented.
-        return false;
     }
 
     void MetalSwapChain::setVsyncEnabled(bool vsyncEnabled) {
@@ -1248,14 +1237,10 @@ namespace RT64 {
         endActiveClearRenderEncoder();
         endActiveRenderEncoder();
         endActiveResolveComputeEncoder();
+        endActiveComputeEncoder();
         endActiveBlitEncoder();
         
-        if (computeEncoder != nil) {
-            [computeEncoder endEncoding];
-        }
-
         targetFramebuffer = nullptr;
-        computeEncoder = nil;
     }
 
     void MetalCommandList::configureRenderDescriptor(MTLRenderPassDescriptor* renderDescriptor) {
@@ -1292,23 +1277,15 @@ namespace RT64 {
         }
     }
 
-    void MetalCommandList::guaranteeComputeEncoder() {
-        if (computeEncoder == nil) {
-            auto computeDescriptor = [MTLComputePassDescriptor new];
-            computeEncoder = [queue->buffer computeCommandEncoderWithDescriptor: computeDescriptor];
-        }
-    }
-
-
     void MetalCommandList::barriers(RenderBarrierStages stages, const RenderBufferBarrier *bufferBarriers, uint32_t bufferBarriersCount, const RenderTextureBarrier *textureBarriers, uint32_t textureBarriersCount) {
         // TODO: Ignore for now, Metal should handle most of this itself.
     }
 
     void MetalCommandList::dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) {
-        guaranteeComputeEncoder();
-        assert(computeEncoder != nil && "Cannot encode dispatch on nil MTLComputeCommandEncoder!");
+        checkActiveComputeEncoder();
+        assert(activeComputeEncoder != nil && "Cannot encode dispatch on nil MTLComputeCommandEncoder!");
         
-        [computeEncoder dispatchThreadgroups:MTLSizeMake(threadGroupCountX, threadGroupCountY, threadGroupCountZ)
+        [activeComputeEncoder dispatchThreadgroups:MTLSizeMake(threadGroupCountX, threadGroupCountY, threadGroupCountZ)
                       threadsPerThreadgroup:MTLSizeMake(1, 1, 1)];
     }
 
@@ -1345,10 +1322,10 @@ namespace RT64 {
         const auto *interfacePipeline = static_cast<const MetalPipeline *>(pipeline);
         switch (interfacePipeline->type) {
             case MetalPipeline::Type::Compute: {
-                guaranteeComputeEncoder();
+                checkActiveComputeEncoder();
                 const auto *computePipeline = static_cast<const MetalComputePipeline *>(interfacePipeline);
-                assert(computeEncoder != nil && "Cannot set pipeline state on nil MTLComputeCommandEncoder!");
-                [computeEncoder setComputePipelineState: computePipeline->state];
+                assert(activeComputeEncoder != nil && "Cannot set pipeline state on nil MTLComputeCommandEncoder!");
+                [activeComputeEncoder setComputePipelineState: computePipeline->state];
                 break;
             }
             case MetalPipeline::Type::Graphics: {
@@ -1364,13 +1341,29 @@ namespace RT64 {
 
     void MetalCommandList::setComputePipelineLayout(const RenderPipelineLayout *pipelineLayout) {
         assert(pipelineLayout != nullptr);
-        // TODO: Layouts
+        const auto oldLayout = activeComputePipelineLayout;
+        activeComputePipelineLayout = static_cast<const MetalPipelineLayout *>(pipelineLayout);
+
+        if (oldLayout != activeComputePipelineLayout) {
+            indicesToComputeDescriptorSets.clear();
+            computePushConstantsBuffer = nil;
+        }
     }
 
     void MetalCommandList::setComputePushConstants(uint32_t rangeIndex, const void *data) {
-        assert(computeEncoder != nil && "Cannot set bytes on nil MTLComputeCommandEncoder!");
-        // [this->computeEncoder setBytes: data length: atIndex: rangeIndex];
-        // TODO: Push Constants
+        assert(activeComputePipelineLayout != nullptr);
+        assert(rangeIndex < activeComputePipelineLayout->pushConstantRanges.size());
+
+        // TODO: make sure there's parity with Vulkan
+        const RenderPushConstantRange &range = activeComputePipelineLayout->pushConstantRanges[rangeIndex];
+        uint32_t startOffset = 0;
+        for (uint32_t i = 0; i < rangeIndex; i++) {
+            startOffset += activeComputePipelineLayout->pushConstantRanges[i].size;
+        }
+        auto bufferContents = (uint8_t *)[activeComputePipelineLayout->pushConstantsBuffer contents];
+        memcpy(bufferContents + startOffset, data, range.size);
+
+        computePushConstantsBuffer = activeComputePipelineLayout->pushConstantsBuffer;
     }
 
     void MetalCommandList::setComputeDescriptorSet(RenderDescriptorSet *descriptorSet, uint32_t setIndex) {
@@ -1384,7 +1377,6 @@ namespace RT64 {
         activeGraphicsPipelineLayout = static_cast<const MetalPipelineLayout *>(pipelineLayout);
 
         if (oldLayout != activeGraphicsPipelineLayout) {
-            indicesToComputeDescriptorSets.clear();
             indicesToRenderDescriptorSets.clear();
             graphicsPushConstantsBuffer = nil;
         }
@@ -1770,13 +1762,63 @@ namespace RT64 {
             endActiveRenderEncoder();
         }
         if (type != EncoderType::Compute) {
-            endActiveResolveComputeEncoder();
+            endActiveComputeEncoder();
         }
         if (type != EncoderType::Blit) {
             endActiveBlitEncoder();
         }
         if (type != EncoderType::Resolve) {
             endActiveResolveComputeEncoder();
+        }
+    }
+
+    void MetalCommandList::checkActiveComputeEncoder() {
+        assert(targetFramebuffer != nullptr);
+        endOtherEncoders(EncoderType::Compute);
+
+        if (activeComputeEncoder == nil) {
+            MTLComputePassDescriptor *computeDescriptor = [MTLComputePassDescriptor new];
+            activeComputeEncoder = [queue->buffer computeCommandEncoderWithDescriptor: computeDescriptor];
+
+            [activeComputeEncoder setLabel:@"Active Compute Encoder"];
+
+            // Encode Descriptor set layouts and mark resources
+            for (uint32_t i = 0; i < activeComputePipelineLayout->setCount; i++) {
+                const auto *setLayout = activeComputePipelineLayout->setLayoutHandles[i];
+
+                if (indicesToComputeDescriptorSets.count(i) != 0) {
+                    const auto *descriptorSet = indicesToComputeDescriptorSets[i];
+                    // Mark resources in the argument buffer as resident
+                    for (const auto& pair : descriptorSet->indicesToTextures) {
+                        uint32_t index = pair.first;
+                        auto *texture = pair.second;
+                        if (texture != nil) {
+                            [activeComputeEncoder useResource:texture usage:MTLResourceUsageRead];
+
+                            uint32_t adjustedIndex = index - setLayout->descriptorIndexBases[index] + setLayout->descriptorRangeBinding[index];
+                            [setLayout->argumentEncoder setTexture:texture atIndex: adjustedIndex];
+                        }
+                    }
+
+                    // TODO: Mark and bind buffers
+                }
+
+                [activeComputeEncoder setBuffer:setLayout->descriptorBuffer offset:0 atIndex:i];
+            }
+
+            if (computePushConstantsBuffer != nil) {
+                uint32_t pushConstantsIndex = activeComputePipelineLayout->setCount;
+                [activeComputeEncoder setBuffer: computePushConstantsBuffer
+                                         offset: 0
+                                        atIndex: pushConstantsIndex];
+            }
+        }
+    }
+
+    void MetalCommandList::endActiveComputeEncoder() {
+        if (activeComputeEncoder != nil) {
+            [activeComputeEncoder endEncoding];
+            activeComputeEncoder = nil;
         }
     }
 

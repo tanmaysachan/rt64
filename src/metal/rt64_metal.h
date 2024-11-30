@@ -155,11 +155,11 @@ namespace RT64 {
         id<MTLRenderCommandEncoder> activeRenderEncoder = nil;
         id<MTLRenderCommandEncoder> activeClearRenderEncoder = nil;
         id<MTLBlitCommandEncoder> activeBlitEncoder = nil;
-        
+        id<MTLComputeCommandEncoder> activeComputeEncoder = nil;
+
         id<MTLComputePipelineState> msaaResolvePipelineState = nil;
         id<MTLComputeCommandEncoder> activeResolveComputeEncoder = nil;
     
-        id<MTLComputeCommandEncoder> computeEncoder = nil;
         MTLCaptureManager *captureManager = nil;
 
         MTLPrimitiveType currentPrimitiveType = MTLPrimitiveTypeTriangle;
@@ -242,6 +242,8 @@ namespace RT64 {
         void endActiveClearRenderEncoder();
         void checkActiveBlitEncoder();
         void endActiveBlitEncoder();
+        void checkActiveComputeEncoder();
+        void endActiveComputeEncoder();
         void checkActiveResolveComputeEncoder();
         void endActiveResolveComputeEncoder();
     };

@@ -432,7 +432,7 @@ namespace RT64 {
         graphicsDesc.renderTargetCount = 1;
         graphicsDesc.multisampling.sampleCount = MSAACount;
         ctx.rasterPipeline = ctx.device->createGraphicsPipeline(graphicsDesc);
-        
+
         ctx.postSampler = ctx.device->createSampler(RenderSamplerDesc());
         const RenderSampler *postSamplerPtr = ctx.postSampler.get();
         
@@ -639,16 +639,16 @@ namespace RT64 {
         const uint32_t width = ctx.swapChain->getWidth();
         const uint32_t height = ctx.swapChain->getHeight();
         
-        ComputePushConstant pushCostant;
-        pushCostant.Resolution[0] = width;
-        pushCostant.Resolution[1] = height;
-        pushCostant.Multiply[0] = 0.5f;
-        pushCostant.Multiply[1] = 0.5f;
-        pushCostant.Multiply[2] = 1.0f;
-        pushCostant.Multiply[3] = 1.0f;
+        ComputePushConstant pushConstant;
+        pushConstant.Resolution[0] = width;
+        pushConstant.Resolution[1] = height;
+        pushConstant.Multiply[0] = 0.5f;
+        pushConstant.Multiply[1] = 0.5f;
+        pushConstant.Multiply[2] = 1.0f;
+        pushConstant.Multiply[3] = 1.0f;
         ctx.commandList->setPipeline(ctx.computePipeline.get());
         ctx.commandList->setComputePipelineLayout(ctx.computePipelineLayout.get());
-        ctx.commandList->setComputePushConstants(0, &pushCostant);
+        ctx.commandList->setComputePushConstants(0, &pushConstant);
         ctx.commandList->setComputeDescriptorSet(ctx.computeFirstSet->get(), 0);
         ctx.commandList->setComputeDescriptorSet(ctx.computeSecondSet->get(), 1);
         ctx.commandList->dispatch((width + GroupCount - 1) / GroupCount, (height + GroupCount - 1) / GroupCount, 1);
