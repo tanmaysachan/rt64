@@ -55,6 +55,12 @@ namespace RT64 {
         uint32_t sampleCount = 0;
     };
 
+    struct MetalComputeState {
+#ifdef __OBJC__
+        id<MTLComputePipelineState> computePipelineState = nil;
+#endif
+    };
+
     struct MetalDescriptorSet : RenderDescriptorSet {
 #ifdef __OBJC__
         id<MTLBuffer> descriptorBuffer;
@@ -188,6 +194,7 @@ namespace RT64 {
         const MetalPipelineLayout *activeGraphicsPipelineLayout = nullptr;
         const MetalGraphicsPipeline *activeGraphicsPipeline = nullptr;
         const MetalRenderState *activeRenderState = nullptr;
+        const MetalComputeState *activeComputeState = nullptr;
 
         std::unordered_map<uint32_t, MetalDescriptorSet *> indicesToRenderDescriptorSets;
         std::unordered_map<uint32_t, MetalDescriptorSet *> indicesToComputeDescriptorSets;
@@ -390,6 +397,7 @@ namespace RT64 {
         id<MTLComputePipelineState> state = nil;
 #endif
 
+        MetalComputeState *computeState;
         MetalComputePipeline(MetalDevice *device, const RenderComputePipelineDesc &desc);
         ~MetalComputePipeline() override;
         RenderPipelineProgram getProgram(const std::string &name) const override;

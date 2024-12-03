@@ -17,11 +17,11 @@ namespace RT64 {
             case RenderDescriptorRangeType::TEXTURE:
             case RenderDescriptorRangeType::STRUCTURED_BUFFER:
             case RenderDescriptorRangeType::BYTE_ADDRESS_BUFFER:
+            case RenderDescriptorRangeType::READ_WRITE_TEXTURE:
             case RenderDescriptorRangeType::ACCELERATION_STRUCTURE:
                 return MTLDataTypeTexture;
                 
             case RenderDescriptorRangeType::READ_WRITE_FORMATTED_BUFFER:
-            case RenderDescriptorRangeType::READ_WRITE_TEXTURE:
             case RenderDescriptorRangeType::READ_WRITE_STRUCTURED_BUFFER:
             case RenderDescriptorRangeType::READ_WRITE_BYTE_ADDRESS_BUFFER:
                 return MTLDataTypePointer;
@@ -837,6 +837,9 @@ namespace RT64 {
         NSError *error = nullptr;
         this->state = [device->device newComputePipelineStateWithDescriptor: descriptor options: MTLPipelineOptionNone reflection: nil error: &error];
 
+        computeState = new MetalComputeState();
+        computeState->computePipelineState = state;
+
         if (error != nullptr) {
             fprintf(stderr, "MTLDevice newComputePipelineStateWithDescriptor: failed with error %s.\n", [error.localizedDescription cStringUsingEncoding: NSUTF8StringEncoding]);
             return;
@@ -845,6 +848,7 @@ namespace RT64 {
 
     MetalComputePipeline::~MetalComputePipeline() {
         // TODO: Should be handled by ARC
+        delete computeState;
     }
 
     RenderPipelineProgram MetalComputePipeline::getProgram(const std::string &name) const {
@@ -1322,10 +1326,8 @@ namespace RT64 {
         const auto *interfacePipeline = static_cast<const MetalPipeline *>(pipeline);
         switch (interfacePipeline->type) {
             case MetalPipeline::Type::Compute: {
-                checkActiveComputeEncoder();
                 const auto *computePipeline = static_cast<const MetalComputePipeline *>(interfacePipeline);
-                assert(activeComputeEncoder != nil && "Cannot set pipeline state on nil MTLComputeCommandEncoder!");
-                [activeComputeEncoder setComputePipelineState: computePipeline->state];
+                activeComputeState = computePipeline->computeState;
                 break;
             }
             case MetalPipeline::Type::Graphics: {
@@ -1779,8 +1781,8 @@ namespace RT64 {
         if (activeComputeEncoder == nil) {
             MTLComputePassDescriptor *computeDescriptor = [MTLComputePassDescriptor new];
             activeComputeEncoder = [queue->buffer computeCommandEncoderWithDescriptor: computeDescriptor];
-
             [activeComputeEncoder setLabel:@"Active Compute Encoder"];
+            [activeComputeEncoder setComputePipelineState: activeComputeState->computePipelineState];
 
             // Encode Descriptor set layouts and mark resources
             for (uint32_t i = 0; i < activeComputePipelineLayout->setCount; i++) {
