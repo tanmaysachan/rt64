@@ -52,6 +52,12 @@ namespace RT64 {
 #endif
     } MetalContext;
 
+    struct MetalComputeState {
+#ifdef __OBJC__
+        id<MTLComputePipelineState> computePipelineState = nil;
+#endif
+    };
+
     struct MetalRenderState {
 #ifdef __OBJC__
         id<MTLRenderPipelineState> renderPipelineState = nil;
@@ -166,6 +172,7 @@ namespace RT64 {
         id<MTLRenderCommandEncoder> activeClearDepthRenderEncoder = nil;
         id<MTLBlitCommandEncoder> activeBlitEncoder = nil;
         id<MTLComputeCommandEncoder> activeResolveComputeEncoder = nil;
+        id<MTLComputeCommandEncoder> activeComputeEncoder = nil;
     
         id<MTLComputeCommandEncoder> computeEncoder = nil;
         MTLCaptureManager *captureManager = nil;
@@ -196,6 +203,7 @@ namespace RT64 {
         const MetalPipelineLayout *activeGraphicsPipelineLayout = nullptr;
         const MetalGraphicsPipeline *activeGraphicsPipeline = nullptr;
         const MetalRenderState *activeRenderState = nullptr;
+        const MetalComputeState *activeComputeState = nullptr;
 
         std::unordered_map<uint32_t, MetalDescriptorSet *> indicesToRenderDescriptorSets;
         std::unordered_map<uint32_t, MetalDescriptorSet *> indicesToComputeDescriptorSets;
@@ -251,6 +259,8 @@ namespace RT64 {
         void endActiveResolveTextureComputeEncoder();
         void checkActiveClearDepthRenderEncoder();
         void endActiveClearDepthRenderEncoder();
+        void checkActiveComputeEncoder();
+        void endActiveComputeEncoder();
     };
 
     struct MetalCommandFence : RenderCommandFence {
@@ -395,6 +405,7 @@ namespace RT64 {
         id<MTLComputePipelineState> state = nil;
 #endif
 
+        MetalComputeState *computeState;
         MetalComputePipeline(MetalDevice *device, const RenderComputePipelineDesc &desc);
         ~MetalComputePipeline() override;
         RenderPipelineProgram getProgram(const std::string &name) const override;
